@@ -1,0 +1,28 @@
+models:
+  llama3_8b:
+    requested_model_id: meta-llama/Meta-Llama-3-8B-Instruct
+    served_model_id: NousResearch/Meta-Llama-3-8B-Instruct
+    letta_handle: vllm/NousResearch/Meta-Llama-3-8B-Instruct
+    dtype: bfloat16
+    quantization: null
+    tool_call_parser: llama3_json
+    source_note: Official Meta repository access was unavailable; public checkpoint mirror used.
+    revision: 53346005fb0ef11d3b6a83b12c895cca40156b6c
+    template_aligned:
+      tool_call_parser: nano_strict_llama
+      chat_template: /workspace/vllm_templates/tool_chat_template_llama3.1_json.jinja
+  mistral_7b:
+    requested_model_id: mistralai/Mistral-7B-Instruct-v0.3
+    served_model_id: mistralai/Mistral-7B-Instruct-v0.3
+    letta_handle: vllm/mistralai/Mistral-7B-Instruct-v0.3
+    dtype: bfloat16
+    quantization: null
+    tokenizer_mode: hf
+    config_format: auto
+    load_format: auto
+    tool_call_parser: nano_mistral
+    chat_template: /workspace/vllm_templates/tool_chat_template_mistral_parallel.jinja
+    source_note: Official Mistral BF16 checkpoint. NVIDIA vLLM 0.15.1 requires auto config/load format.
+    template_aligned:
+      tool_call_parser: nano_strict_mistral
+      chat_template: /workspace/vllm_templates/tool_chat_template_mistral_parallel.jinja

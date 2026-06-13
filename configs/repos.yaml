@@ -1,0 +1,25 @@
+repos:
+  memgpt-original:
+    url: https://github.com/cpacker/MemGPT.git
+    path: external/repos/memgpt-original
+    purpose: Original MemGPT repository redirect and paper artifact reference.
+  letta:
+    url: https://github.com/letta-ai/letta.git
+    path: external/repos/letta
+    purpose: Current open-source framework descended from MemGPT.
+  peft:
+    url: https://github.com/huggingface/peft.git
+    path: external/repos/peft
+    purpose: LoRA and parameter-efficient fine-tuning.
+  trl:
+    url: https://github.com/huggingface/trl.git
+    path: external/repos/trl
+    purpose: Supervised fine-tuning loop utilities.
+  vllm:
+    url: https://github.com/vllm-project/vllm.git
+    path: external/repos/vllm
+    purpose: OpenAI-compatible local inference server for student models.
+  lighteval:
+    url: https://github.com/huggingface/lighteval.git
+    path: external/repos/lighteval
+    purpose: Evaluation harness reference for model comparisons.

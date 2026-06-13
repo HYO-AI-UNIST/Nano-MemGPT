@@ -1,0 +1,78 @@
+project:
+  name: nano-memgpt
+  proposal: customproposal.pdf
+  seed: 42
+
+models:
+  teacher:
+    provider: openai
+    model: ${OPENAI_TEACHER_MODEL}
+  judge:
+    provider: openai
+    model: ${OPENAI_JUDGE_MODEL}
+  student:
+    model_id: ${STUDENT_MODEL_ID}
+    max_seq_length: 8192
+    dtype: bfloat16
+    quantization: null
+
+data:
+  msc_dmr:
+    hf_dataset: MemGPT/MSC-Self-Instruct
+    raw_dir: data/raw/msc_dmr
+    processed_dir: data/processed/msc_dmr
+  nq_open:
+    hf_dataset: MemGPT/qa_data
+    wiki_embeddings: MemGPT/wikipedia_embeddings
+    raw_dir: data/raw/nq_open
+    processed_dir: data/processed/nq_open
+  trajectories:
+    train_jsonl: data/trajectories/gpt41_paper_substring_scaled_approved_sft.jsonl
+    oracle_jsonl: data/trajectories/gpt41_paper_substring_scaled_approved_oracle.jsonl
+
+letta:
+  base_url: ${LETTA_BASE_URL}
+  api_key: ${LETTA_API_KEY}
+  archival_store: pgvector
+  recall_store: pgvector
+
+diagnostics:
+  failure_types:
+    retrieval_miss: "Student answers without searching when teacher searched."
+    retrieval_hallucination: "Student searches unnecessarily, malformedly, or with a low-value query."
+    chain_failure: "Student stops function chaining before the teacher's heartbeat sequence ends."
+
+training:
+  method: lora
+  lora:
+    r: 16
+    alpha: 32
+    dropout: 0.05
+    target_modules:
+      - q_proj
+      - k_proj
+      - v_proj
+      - o_proj
+  sft:
+    output_dir: outputs/lora_student
+    max_length: 8192
+    loss_type: chunked_nll
+    learning_rate: 2.0e-5
+    num_train_epochs: 3
+    per_device_train_batch_size: 1
+    gradient_accumulation_steps: 16
+    warmup_ratio: 0.03
+    logging_steps: 5
+    save_steps: 100
+
+evaluation:
+  dmr:
+    metrics:
+      - llm_judge_accuracy
+      - rouge_l_recall
+  document_qa:
+    retrieved_k:
+      - 5
+      - 10
+      - 20
+      - 40

@@ -1,0 +1,5 @@
+# Optional local OpenAI-compatible inference server.
+#
+# Keep this separate from the main image because vLLM wheels may pull a new torch/CUDA
+# stack. Install only after checking compatibility with the active NVIDIA PyTorch image.
+vllm>=0.8.0
