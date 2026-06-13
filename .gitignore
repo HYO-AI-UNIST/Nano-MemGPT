@@ -1,0 +1,64 @@
+# Secrets and local environment
+.env
+.env.*
+!.env.example
+
+# Python caches and build outputs
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+build/
+dist/
+*.egg-info/
+
+# Notebook/editor/OS state
+.ipynb_checkpoints/
+.vscode/
+.idea/
+.DS_Store
+*.swp
+*.swo
+
+# Large or generated research artifacts
+data/raw/
+data/processed/
+data/trajectories/
+data/evaluation/
+data/analysis/
+data/eval/
+logs/
+outputs/
+
+# Model weights and adapters should be published through a model/artifact registry.
+*.safetensors
+*.bin
+*.pt
+*.pth
+*.ckpt
+*.gguf
+
+# External repositories are reproducible from external/repos/COMMITS.md.
+external/repos/*
+!external/repos/COMMITS.md
+
+# LaTeX build products. Keep source .tex/.bib/.sty and optionally committed PDFs.
+docs/latex/*.aux
+docs/latex/*.bbl
+docs/latex/*.bcf
+docs/latex/*.blg
+docs/latex/*.fdb_latexmk
+docs/latex/*.fls
+docs/latex/*.log
+docs/latex/*.out
+docs/latex/*.run.xml
+docs/latex/*.synctex.gz
+docs/latex/*.nav
+docs/latex/*.snm
+docs/latex/*.toc
+docs/latex/*.xdv
+docs/latex/*.vrb

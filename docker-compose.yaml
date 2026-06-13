@@ -1,0 +1,161 @@
+services:
+  nano-memgpt-dev:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    image: nano-memgpt:dev
+    container_name: nano_memgpt_dev
+    init: true
+    working_dir: /workspace/AI_dev/NLP/Nano-MemGPT
+    stdin_open: true
+    tty: true
+    command: sleep infinity
+    restart: unless-stopped
+    shm_size: "64g"
+    ulimits:
+      memlock: -1
+      stack: 67108864
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    env_file:
+      - .env
+    environment:
+      TZ: Asia/Seoul
+      NVIDIA_DRIVER_CAPABILITIES: compute,utility
+      PYTHONPATH: /workspace/AI_dev/NLP/Nano-MemGPT/src
+    volumes:
+      - type: bind
+        source: ${HOME}/workspace/AI_dev
+        target: /workspace/AI_dev
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${HOME}/workspace/AI_dev/model_cache/huggingface
+        target: /root/.cache/huggingface
+      - type: bind
+        source: ${HOME}/.cache/pip
+        target: /root/.cache/pip
+      - type: bind
+        source: ${HOME}/.cache/uv
+        target: /root/.cache/uv
+      - type: bind
+        source: ${HOME}/.cache/torch
+        target: /root/.cache/torch
+      - type: bind
+        source: ${HOME}/.nv/ComputeCache
+        target: /root/.nv/ComputeCache
+      - type: bind
+        source: /data
+        target: /workspace/data
+    depends_on:
+      pgvector:
+        condition: service_healthy
+
+  pgvector:
+    image: pgvector/pgvector:pg16
+    container_name: nano_memgpt_pgvector
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: nanomemgpt
+      POSTGRES_USER: nanomemgpt
+      POSTGRES_PASSWORD: nanomemgpt
+    ports:
+      - "5439:5432"
+    volumes:
+      - nano_memgpt_pgdata:/var/lib/postgresql/data
+      - ./docker/init-pgvector.sql:/docker-entrypoint-initdb.d/init-pgvector.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nanomemgpt -d nanomemgpt"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  letta-server:
+    image: letta/letta:latest
+    container_name: nano_memgpt_letta
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      LETTA_PG_URI: postgresql://nanomemgpt:nanomemgpt@pgvector:5432/nanomemgpt
+      LETTA_DEBUG: "True"
+      LETTA_LLM_ENDPOINT: http://llama-vllm:8000
+      LETTA_LLM_ENDPOINT_TYPE: vllm
+      LETTA_LLM_MODEL: ${STUDENT_MODEL_ID}
+      LETTA_LLM_CONTEXT_WINDOW: ${STUDENT_CONTEXT_WINDOW:-8192}
+      VLLM_API_BASE: http://llama-vllm:8000
+    ports:
+      - "8083:8083"
+      - "8283:8283"
+    volumes:
+      - letta_data:/root/.letta
+      - ./external/repos/letta/letta/functions/function_sets/base.py:/app/letta/functions/function_sets/base.py:ro
+    depends_on:
+      pgvector:
+        condition: service_healthy
+
+  llama-vllm:
+    profiles:
+      - llama
+    image: nvcr.io/nvidia/vllm:26.02-py3
+    container_name: nano_memgpt_llama_vllm
+    init: true
+    ipc: host
+    restart: unless-stopped
+    command:
+      - vllm
+      - serve
+      - ${STUDENT_MODEL_ID}
+      - --host
+      - "0.0.0.0"
+      - --port
+      - "8000"
+      - --dtype
+      - bfloat16
+      - --tokenizer-mode
+      - ${STUDENT_TOKENIZER_MODE:-auto}
+      - --max-model-len
+      - ${STUDENT_CONTEXT_WINDOW:-8192}
+      - --gpu-memory-utilization
+      - "0.88"
+      - --enable-auto-tool-choice
+      - --tool-parser-plugin
+      - /workspace/vllm_plugins/nano_mistral_tool_parser.py
+      - --tool-call-parser
+      - ${STUDENT_TOOL_CALL_PARSER:-llama3_json}
+    environment:
+      HF_TOKEN: ${HF_TOKEN}
+      HUGGING_FACE_HUB_TOKEN: ${HF_TOKEN}
+      HF_HOME: /root/.cache/huggingface
+      HF_HUB_DISABLE_XET: "1"
+    ports:
+      - "8001:8000"
+    volumes:
+      - type: bind
+        source: ${HOME}/workspace/AI_dev/model_cache/huggingface
+        target: /root/.cache/huggingface
+      - type: bind
+        source: ./vllm_plugins
+        target: /workspace/vllm_plugins
+        read_only: true
+      - type: bind
+        source: ./external/repos/vllm/examples
+        target: /workspace/vllm_templates
+        read_only: true
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids:
+                - "GPU-002f3d46-a212-1180-2fed-fa8e9f6f4150"
+              capabilities: [gpu]
+
+volumes:
+  nano_memgpt_pgdata:
+  letta_data:

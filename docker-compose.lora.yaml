@@ -1,0 +1,49 @@
+services:
+  llama-vllm:
+    command:
+      - vllm
+      - serve
+      - ${STUDENT_MODEL_ID}
+      - --host
+      - "0.0.0.0"
+      - --port
+      - "8000"
+      - --dtype
+      - bfloat16
+      - --tokenizer-mode
+      - ${STUDENT_TOKENIZER_MODE:-auto}
+      - --max-model-len
+      - ${STUDENT_CONTEXT_WINDOW:-8192}
+      - --gpu-memory-utilization
+      - "0.88"
+      - --enable-auto-tool-choice
+      - --tool-parser-plugin
+      - /workspace/vllm_plugins/nano_strict_tool_parser.py
+      - --tool-call-parser
+      - ${STUDENT_TOOL_CALL_PARSER:-llama3_json}
+      - --enable-lora
+      - --max-lora-rank
+      - "16"
+      - --lora-modules
+      - nano-memgpt-llama3-r8=/workspace/nano_memgpt_outputs/lora_student_r8/final_adapter
+      - nano-memgpt-llama3-r16=/workspace/nano_memgpt_outputs/lora_student_r16/final_adapter
+      - nano-memgpt-llama3-query-answer-r16=/workspace/nano_memgpt_outputs/lora_query_answer_r16/final_adapter
+      - nano-memgpt-llama3-query-only-r16=/workspace/nano_memgpt_outputs/lora_query_only_r16/final_adapter
+      - nano-memgpt-llama3-query-hard-positive-r16=/workspace/nano_memgpt_outputs/lora_query_hard_positive_r16/final_adapter
+      - nano-memgpt-llama3-query-pref-zero-dpo-r16=/workspace/nano_memgpt_outputs/lora_query_preference_zero_dpo_r16/final_adapter
+    volumes:
+      - type: bind
+        source: ${HOME}/workspace/AI_dev/model_cache/huggingface
+        target: /root/.cache/huggingface
+      - type: bind
+        source: ./vllm_plugins
+        target: /workspace/vllm_plugins
+        read_only: true
+      - type: bind
+        source: ./external/repos/vllm/examples
+        target: /workspace/vllm_templates
+        read_only: true
+      - type: bind
+        source: ./outputs
+        target: /workspace/nano_memgpt_outputs
+        read_only: true
