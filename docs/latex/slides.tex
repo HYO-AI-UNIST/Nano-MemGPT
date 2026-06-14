@@ -1,4 +1,5 @@
-% Compile with XeLaTeX (metropolis + Fira Sans).
+% !TEX program = xelatex
+% Compile with XeLaTeX (metropolis + Fira Sans) -- NOT pdflatex.
 %   latexmk -xelatex slides.tex
 \documentclass[10pt,aspectratio=169]{beamer}
 
@@ -51,6 +52,23 @@
   \end{quote}
   \vspace{0.3em}
   The agent has to \alert{recover that utterance} and ground the answer in it.
+\end{frame}
+
+% ---------------------------------------------------------------
+\begin{frame}{MemGPT: virtual memory for an LLM}
+  \begin{center}
+    \includegraphics[width=0.70\textwidth]{MemGPT-diagram.png}
+  \end{center}
+  \vspace{0.3em}
+  {\small The context window is small, tiered working memory; \alert{Archival}
+  and \alert{Recall} storage are the large external memory, reached
+  \alert{only through function calls}.}
+  \par\vspace{0.3em}
+  {\small In this work we use only the
+  \alert{Recall\,/\,\texttt{conversation\_search}} path (not archival), and that
+  recall is \alert{substring, not semantic}.}
+  \par\vspace{0.3em}
+  {\scriptsize Figure: Packer et al.\ (2023).}
 \end{frame}
 
 % ---------------------------------------------------------------
@@ -197,37 +215,24 @@
 
 % ---------------------------------------------------------------
 \begin{frame}{The bottleneck is getting evidence, not using it}
-  \begin{columns}[c,onlytextwidth]
-    \column{0.54\textwidth}
-      \begin{center}
-      \begin{tikzpicture}
-        \begin{axis}[
-            ybar, width=\textwidth, height=4.6cm, bar width=20pt,
-            ymin=0, ymax=1, ylabel={\small GPT-4.1 judge},
-            xtick={1,2,3},
-            xticklabels={Unaided, {+Query hint}, {+Evidence}},
-            x tick label style={font=\scriptsize}, y tick label style={font=\scriptsize},
-            enlarge x limits=0.28, ymajorgrids,
-            nodes near coords, every node near coord/.append style={font=\scriptsize,
-              /pgf/number format/fixed, /pgf/number format/precision=2,
-              /pgf/number format/fixed zerofill},
-        ]
-        \addplot[fill=gray!35, draw=gray!55] coordinates {(1,0.5797) (2,0.6294)};
-        \addplot[fill=accent, draw=accent] coordinates {(3,0.8668)};
-        \end{axis}
-      \end{tikzpicture}
-      \end{center}
-    \column{0.42\textwidth}
-      Same \alert{398} rows.
-      \vspace{0.8em}
-      \begin{itemize}
-        \item Teacher \alert{evidence}: \;$+29$ pts.
-        \item Teacher \alert{query hint}: \;$+5$ pts.
-      \end{itemize}
-      \vspace{0.6em}
-      Handing over the evidence recovers the model; handing over the query
-      strings barely moves it.
-  \end{columns}
+  We give the LoRA student different help, all on the \alert{same 398} rows:
+  \vspace{1.1em}
+  \begin{center}
+  \begin{tabular}{lcc}
+    \toprule
+    \textbf{What the student is given} & \textbf{GPT-4.1 judge} & \textbf{vs.\ unaided} \\
+    \midrule
+    Nothing (unaided)        & 0.58 & --- \\
+    \;+\; teacher query strings & 0.63 & $+0.05$ \\
+    \;+\; teacher evidence      & \alert{0.87} & \alert{$+0.29$} \\
+    \bottomrule
+  \end{tabular}
+  \end{center}
+  \vspace{1.1em}
+  \begin{center}
+  Handing over the \alert{evidence} recovers the model;\\
+  handing over the \alert{query strings} barely moves it.
+  \end{center}
 \end{frame}
 
 % ---------------------------------------------------------------
@@ -268,6 +273,33 @@
     Use the retriever as feedback at \alert{search time} ---
     don't bake teacher queries into weights.
   \end{center}
+\end{frame}
+
+% ---------------------------------------------------------------
+\begin{frame}{Candidate reranking, step by step}
+  At each search step, let the model guess several times and judge by what comes back:
+  \vspace{1.0em}
+  \begin{center}
+  \begin{tikzpicture}[node distance=6mm]
+    \node[lp] (p) {Probe};
+    \node[lp, right=of p] (c) {5\\candidates};
+    \node[lp, right=of c] (s) {search\\each};
+    \node[lp, right=of s] (k) {score \&\\keep best};
+    \node[lp, right=of k] (e) {evidence};
+    \draw[fl] (p) -- (c);
+    \draw[fl] (c) -- (s);
+    \draw[fl] (s) -- (k);
+    \draw[fl] (k) -- (e);
+  \end{tikzpicture}
+  \end{center}
+  \vspace{0.9em}
+  \begin{itemize}
+    \item The score \alert{never sees the answer}: it rewards results near a target
+          count and on-topic with the probe, and penalizes \emph{empty},
+          \emph{too broad}, and \emph{repeated} queries.
+    \item The hard failures were simply \alert{zero-result} queries --- proposing
+          several and dropping the empties already recovers \alert{0/72 $\to$ 25/72}.
+  \end{itemize}
 \end{frame}
 
 % ---------------------------------------------------------------
